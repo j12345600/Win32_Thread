@@ -15,7 +15,7 @@
 
 int main( void );                    // Thread 1: main 
 void KbdFunc( void  );               // Keyboard input, thread dispatch
-void BounceProc( void * MyID );      // Threads 2 to n: display 
+unsigned BounceProc( void * MyID );      // Threads 2 to n: display 
 void ClearScreen( void );            // Screen clear 
 void ShutDown( void );               // Program shutdown 
 void WriteTitle( int ThreadNum );    // Display title bar information 
@@ -35,8 +35,11 @@ int main() // Thread One
     ClearScreen();
     WriteTitle( 0 );
 
+	 char MyCell = 0x02;  
+	 char MyCell2 = 0x01;  
+	 printf("Mycell=%c Mycell2=%c\n",MyCell,MyCell2);
     // Create the mutexes and reset thread count.
-	  hScreenMutex = CreateMutex( NULL, FALSE, NULL );  // Cleared 
+	hScreenMutex = CreateMutex( NULL, FALSE, NULL );  // Cleared 
     hRunMutex = CreateMutex( NULL, TRUE, NULL );      // Set 
     ThreadNr = 0;
 
@@ -54,7 +57,7 @@ void ShutDown( void ) // Shut down threads
     while ( ThreadNr > 0 )
     {
         // Tell thread to die and record its death.
-		  ReleaseMutex( hRunMutex );
+		ReleaseMutex( hRunMutex );
         ThreadNr--;   
     }
 
@@ -74,7 +77,10 @@ void KbdFunc( void ) // Dispatch and count threads.
              ThreadNr < MAX_THREADS )
         {
             ThreadNr++;
-            _beginthreadex(NULL,0,BounceProc,&ThreadNr,0,NULL );
+               //unsigned  uiThread2ID; 
+            //_beginthreadex(NULL, 0, &secondThreadFunc, NULL, 0, &threadID);  
+            _beginthreadex(NULL,0,BounceProc,&ThreadNr,0,NULL);
+            //_beginthread(BounceProc,0,&ThreadNr);
             WriteTitle( ThreadNr );
         }
     } while( tolower( KeyInfo ) != 'q' );
@@ -82,7 +88,7 @@ void KbdFunc( void ) // Dispatch and count threads.
     ShutDown();
 }
 
-void BounceProc( void *pMyID )
+unsigned BounceProc( void *pMyID )
 {
     char    MyCell, OldCell;
     WORD    MyAttrib, OldAttrib;
@@ -104,9 +110,9 @@ void BounceProc( void *pMyID )
     // Set up "happy face" & generate color 
     // attribute from thread number.  
 	if( *MyID > 16)
-        MyCell = 0x01;          // outline face 
+        MyCell = 'A';          // outline face 
     else
-        MyCell = 0x02;          // solid face 
+        MyCell = 'Z';          // solid face 
     MyAttrib =  *MyID & 0x0F;   // force black background 
 
     do
@@ -140,16 +146,17 @@ void BounceProc( void *pMyID )
         if( Coords.X < 0 || Coords.X >= csbiInfo.dwSize.X )
         {
             Delta.X = -Delta.X;
-            Beep( 400, 50 );
+            //Beep( 400, 50 );
         }
         if( Coords.Y < 0 || Coords.Y > csbiInfo.dwSize.Y )
         {
             Delta.Y = -Delta.Y;
-            Beep( 600, 50 );
+            //Beep( 600, 50 );
         }
     }
     // Repeat while RunMutex is still taken.
-	  while ( WaitForSingleObject( hRunMutex, 75L ) == WAIT_TIMEOUT );
+	  while ( WaitForSingleObject( hRunMutex, 80L ) == WAIT_TIMEOUT );
+	  return 1;
 }
 
 void WriteTitle( int ThreadNum )
