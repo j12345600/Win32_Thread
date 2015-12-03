@@ -14,48 +14,66 @@ struct wordRecord {
     int count;
     wordRecord(string s){
     	word=s;
-    	count=0; 
+    	count=1; 
 	}
 };
+struct Range {
+	int start, end;
+	Range(int s = 0, int e = 0) {start = s, end = e;}
+};
+
 HANDLE  hResourceMutex;
 vector<wordRecord> dict;
 int search(wordRecord wR);
+void sortDict();
 unsigned  WINAPI secondThreadFunc(void* argu) {  
 	char* filename=(char*)argu;
     fstream  file ;
     string s;
+    int pos;
     file.open(filename,ios::in);   
     while(!file.eof( )){
-    WaitForSingleObject( hResourceMutex, INFINITE );
-    file>>s;
-    
-    dict.push_back(wordRecord(s));
-    
-    ReleaseMutex( hResourceMutex );
+	    WaitForSingleObject( hResourceMutex, INFINITE );//wait and lock vector dict
+	    file>>s;
+		dict.push_back(wordRecord(s));
+	    ReleaseMutex( hResourceMutex );					//release vector dict
 	}
    
     file.close();
     _endthreadex(0);          
     return 1;  
 }  
+void testFunc(){
+	vector<wordRecord>::iterator it_start;
+	vector<wordRecord>::iterator it_end;
+	vector<wordRecord>::iterator it_current;
+	for(it_current=dict.begin();it_current<dict.end();it_current++){
+		it_end=it_current;
+		it_start=it_current+1;
+		while((*(it_end+1)).word.compare((*it_current).word)==0){
+			it_end++;
+		}
+		if(it_end-it_start==0){
+			(*it_current).count++;
+			it_current=dict.erase(it_start);
+		}
+		else if(it_end-it_start>0){
+			it_end++;
+			(*it_current).count+=it_end-it_start;
+			it_current=dict.erase(it_start,it_end);
+			it_current--;
+		}
+	}
+	
+}
 
 int main(int argc, char* argv[]) {  
 
-//	_beginthreadex.exe gcc.txt bash.txt
-//	argc=MAX_THREADS;
-//	argv[1]="gcc.txt";
-//	argv[2]="bash.txt";
     HANDLE hThread[MAX_THREADS];   
     hResourceMutex=CreateMutex(NULL,FALSE,NULL);
-    vector<string> str;
-    str.push_back("abc");
-    str.push_back("def");
-    for(int i=0;i<str.size();i++) cout<<str[i];
-    cout<<endl;
-    swap(str[0],str[1]);
-    for(int i=0;i<str.size();i++) cout<<str[i];
-	//cout<<(5-4)%2;
-    for(int i=0;i<argc-1;i++) {
+    fstream  file ;
+    file.open("output.txt",ios::out);
+    for(int i=0;i<argc-1&&i<MAX_THREADS;i++) {
 		hThread[i] = (HANDLE)_beginthreadex(NULL,				//security
 											0,					//stack
 		  									secondThreadFunc,	//subProgram
@@ -65,11 +83,15 @@ int main(int argc, char* argv[]) {
 	}
     	
 										
-    for(int i=0;i<argc-1;i++) WaitForSingleObject(hThread[i], INFINITE);  
-    
-   // printf("Counter should be %d, it is %d now!\nThreadID=%i", icounterMax, icounter,threadID);  
+    for(int i=0;i<argc-1&&i<MAX_THREADS;i++) 
+		WaitForSingleObject(hThread[i], INFINITE); 
+    cout<<"start sorting..."<<endl;
+    sortDict();
+    testFunc();
     for(int i=0;i<argc-1;i++) CloseHandle(hThread[i]);  
-    for(int i=0;i<dict.size()&&i<100;i++) cout<<dict[i].word<<" ";
+    for(int i=0;i<dict.size();i++) 
+		file<<dict[i].word<<" "<<dict[i].count<<endl;
+	file.close();
     return 1;
 }  
 int search(wordRecord wR){
@@ -94,5 +116,29 @@ int search(wordRecord wR){
 	return -1;
 }
 void sortDict(){
-	
+	int len=dict.size();
+	if (len <= 0) return; //避免len等於負值時宣告堆疊陣列當機
+	//r[]模擬堆疊,p為數量,r[p++]為push,r[--p]為pop且取得元素
+	Range r[len]; int p = 0;
+	r[p++] = Range(0, len - 1);
+	while (p) {
+		Range range = r[--p];
+		if(range.start >= range.end) continue;
+		string mid = dict[range.end].word;
+		int left = range.start, right = range.end - 1;
+		while (left < right) {
+			while (dict[left].word.compare(mid) < 0 && left < right) left++;
+			while (dict[right].word.compare(mid) >= 0 && left < right) right--;
+			std::swap(dict[left], dict[right]);
+		}
+		if (dict[left].word.compare(dict[range.end].word) >= 0)
+			std::swap(dict[left], dict[range.end]);
+		else
+			left++;
+		r[p++] = Range(range.start, left - 1);
+		r[p++] = Range(left + 1, range.end);
+	}
 }
+
+
+
