@@ -25,7 +25,11 @@ struct Range {
 HANDLE  hResourceMutex;
 vector<wordRecord> dict;
 int search(wordRecord wR);
-void sortDict();
+void sortDictbyWord();
+void sortDictbyCount();
+void merge();
+void merge2();
+void toLower(string &s);
 unsigned  WINAPI secondThreadFunc(void* argu) {  
 	char* filename=(char*)argu;
     fstream  file ;
@@ -34,7 +38,7 @@ unsigned  WINAPI secondThreadFunc(void* argu) {
     file.open(filename,ios::in);   
     while(!file.eof( )){
 	    WaitForSingleObject( hResourceMutex, INFINITE );//wait and lock vector dict
-	    file>>s;
+	    file>>s;toLower(s);
 		dict.push_back(wordRecord(s));
 	    ReleaseMutex( hResourceMutex );					//release vector dict
 	}
@@ -43,29 +47,6 @@ unsigned  WINAPI secondThreadFunc(void* argu) {
     _endthreadex(0);          
     return 1;  
 }  
-void testFunc(){
-	vector<wordRecord>::iterator it_start;
-	vector<wordRecord>::iterator it_end;
-	vector<wordRecord>::iterator it_current;
-	for(it_current=dict.begin();it_current<dict.end();it_current++){
-		it_end=it_current;
-		it_start=it_current+1;
-		while((*(it_end+1)).word.compare((*it_current).word)==0){
-			it_end++;
-		}
-		if(it_end-it_start==0){
-			(*it_current).count++;
-			it_current=dict.erase(it_start);
-		}
-		else if(it_end-it_start>0){
-			it_end++;
-			(*it_current).count+=it_end-it_start;
-			it_current=dict.erase(it_start,it_end);
-			it_current--;
-		}
-	}
-	
-}
 
 int main(int argc, char* argv[]) {  
 
@@ -86,8 +67,11 @@ int main(int argc, char* argv[]) {
     for(int i=0;i<argc-1&&i<MAX_THREADS;i++) 
 		WaitForSingleObject(hThread[i], INFINITE); 
     cout<<"start sorting..."<<endl;
-    sortDict();
-    testFunc();
+    sortDictbyWord();
+    cout<<"start merging..."<<endl;
+    merge2();
+    //cout<<"start sorting by count..."<<endl;
+    //sortDictbyCount();
     for(int i=0;i<argc-1;i++) CloseHandle(hThread[i]);  
     for(int i=0;i<dict.size();i++) 
 		file<<dict[i].word<<" "<<dict[i].count<<endl;
@@ -115,7 +99,7 @@ int search(wordRecord wR){
 	}
 	return -1;
 }
-void sortDict(){
+void sortDictbyWord(){
 	int len=dict.size();
 	if (len <= 0) return; //避免len等於負值時宣告堆疊陣列當機
 	//r[]模擬堆疊,p為數量,r[p++]為push,r[--p]為pop且取得元素
@@ -139,6 +123,76 @@ void sortDict(){
 		r[p++] = Range(left + 1, range.end);
 	}
 }
-
-
-
+void sortDictbyCount(){
+	int pos,current;
+	wordRecord tmp("");
+	for(int i=1;i<dict.size();i++){
+		tmp=dict[i];
+		for(int j=i-1;j>=0;j--){
+			if(dict[j].count<tmp.count&&j==0) {
+				dict[j+1]=dict[j];
+				dict[j]=tmp;
+			}
+			else if(dict[j].count<tmp.count) dict[j+1]=dict[j];
+			else {
+				dict[j+1]=tmp;
+				break;	
+			}
+		}
+		
+	}
+}
+void toLower(string &s){
+	for(int i=0;i<s.size();i++){
+		if(s.at(i)<='Z'&&s.at(i)>='A') s[i]=s.at(i)-('A'-'a');
+	}
+}
+void merge(){
+	vector<wordRecord>::iterator it_start;
+	vector<wordRecord>::iterator it_end;
+	vector<wordRecord>::iterator it_current;
+	for(it_current=dict.begin();it_current<dict.end();){
+		it_end=it_current;
+		it_start=it_current+1;
+		while((*(it_end+1)).word.compare((*it_current).word)==0){
+			it_end++;
+		}
+		if(it_end-it_start==0){
+			(*it_current).count++;
+			it_current=dict.erase(it_start);
+		}
+		else if(it_end-it_start>0){
+			it_end++;
+			(*it_current).count+=it_end-it_start;
+			it_current=dict.erase(it_start,it_end);
+			//it_current--;
+		}
+		else it_current++;
+	}
+	
+}
+void merge2(){
+	vector<wordRecord>::iterator it_start;
+	vector<wordRecord>::iterator it_end;
+	vector<wordRecord>::iterator it_current;
+	for(it_current=dict.rbegin();it_current!=dict.rend();){
+		it_end=it_current;
+		it_start=it_current;
+		while((*(it_end-1)).word.compare((*it_current).word)==0){
+			it_end--;
+		}
+		if(it_end-it_start==1){
+			it_current=it_end-1;
+			(*it_end).count++;
+			dict.erase(it_start);
+		}
+		else if(it_end-it_start>0){
+			it_current=it_end-1;
+			(*it_end).count+=it_end-it_start-1;
+			dict.erase(++it_end,it_start);
+			//it_current--;
+		}
+		else it_current--;
+	}
+	
+}
