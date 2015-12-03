@@ -19,7 +19,7 @@ struct wordRecord {
 };
 HANDLE  hResourceMutex;
 vector<wordRecord> dict;
-
+int search(wordRecord wR);
 unsigned  WINAPI secondThreadFunc(void* argu) {  
 	char* filename=(char*)argu;
     fstream  file ;
@@ -47,8 +47,14 @@ int main(int argc, char* argv[]) {
 //	argv[2]="bash.txt";
     HANDLE hThread[MAX_THREADS];   
     hResourceMutex=CreateMutex(NULL,FALSE,NULL);
-    
-
+    vector<string> str;
+    str.push_back("abc");
+    str.push_back("def");
+    for(int i=0;i<str.size();i++) cout<<str[i];
+    cout<<endl;
+    swap(str[0],str[1]);
+    for(int i=0;i<str.size();i++) cout<<str[i];
+	//cout<<(5-4)%2;
     for(int i=0;i<argc-1;i++) {
 		hThread[i] = (HANDLE)_beginthreadex(NULL,				//security
 											0,					//stack
@@ -66,3 +72,27 @@ int main(int argc, char* argv[]) {
     for(int i=0;i<dict.size()&&i<100;i++) cout<<dict[i].word<<" ";
     return 1;
 }  
+int search(wordRecord wR){
+	int start=0, end=dict.size()-1;
+	int mid,compareResult;
+	while (start<=end){
+		mid = (start + end) / 2;
+		compareResult=dict[mid].word.compare(wR.word);
+        if (compareResult==0 )
+        {
+            return mid;
+        }
+        else if (compareResult > 0)
+        {
+            end = mid - 1;
+        }
+        else if (compareResult < 0)
+        {
+            start = mid + 1;
+        }
+	}
+	return -1;
+}
+void sortDict(){
+	
+}
