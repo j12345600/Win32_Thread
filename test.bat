@@ -1,0 +1,1 @@
+_beginthreadex.exe bash.txt gcc.txt 
