@@ -1,1 +1,3 @@
-_beginthreadex.exe bash.txt gcc.txt 
+_beginthreadex.exe abc def asd
+@echo off
+pause
