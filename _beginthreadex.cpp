@@ -7,6 +7,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include<chrono>
 #define MAX_THREADS 3
 using namespace std;
 struct wordRecord {
@@ -58,7 +59,7 @@ unsigned  WINAPI secondThreadFunc(void* argu) {
     return 1;  
 }  
 
-int main(int argc, char* argv[]) {  
+int main(int argc, char* argv[]) { 
 	string outName="out(";
 	for(int i=1;i<argc;i++) {
 		if(i<argc-1){outName+=argv[i];outName+=" ";}
@@ -88,7 +89,7 @@ int main(int argc, char* argv[]) {
     cout<<"start sorting..."<<endl;
     sortDictbyWord();
     cout<<"start merging..."<<endl;
-    merge();
+    merge2();
     cout<<"start sorting by count..."<<endl;
     sortDictbyCount();
     for(int i=0;i<argc-1;i++) CloseHandle(hThread[i]);  
@@ -184,49 +185,63 @@ void merge(){
 			it_end++;
 			(*it_current).count+=it_end-it_start;
 			it_current=dict.erase(it_start,it_end);
-			//it_current--;
 		}
 		else it_current++;
 	}
 	
 }
-//void merge2(){
-//	vector<wordRecord>::iterator it_start;
-//	vector<wordRecord>::iterator it_end;
-//	vector<wordRecord>::iterator it_current;
-//	for(it_current=dict.rbegin();it_current!=dict.rend();){
-//		it_end=it_current;
-//		it_start=it_current;
-//		while((*(it_end-1)).word.compare((*it_current).word)==0){
-//			it_end--;
-//		}
-//		if(it_end-it_start==1){
-//			it_current=it_end-1;
-//			(*it_end).count++;
-//			dict.erase(it_start);
-//		}
-//		else if(it_end-it_start>0){
-//			it_current=it_end-1;
-//			(*it_end).count+=it_end-it_start-1;
-//			dict.erase(++it_end,it_start);
-//			//it_current--;
-//		}
-//		else it_current--;
-//	}
-//	
-//}
+void merge2(){
+	if(dict.empty()) return;
+	vector<wordRecord>::iterator it_start;
+	vector<wordRecord>::iterator it_end=dict.end()-1;
+	vector<wordRecord>::iterator it_current=dict.end()-2;
+	while(it_current>=dict.begin()){
+		if((*it_current).word.compare((*it_end).word)!=0){
+			it_start=it_current+1;
+			if(it_end-it_start==1) {
+				(*it_start).count++;
+				dict.erase(it_end);
+			}
+			else{
+				(*it_start).count=it_end-it_start+1;
+				it_start++;
+				dict.erase(it_start,it_end+1);
+			}
+			it_end=it_current;
+		}
+		else if ((*it_current).word.compare((*it_end).word)==0
+					&&it_current==dict.begin()){
+			if(it_end-it_current==1) {
+				(*it_current).count++;
+				dict.erase(it_end);
+			}
+			else{
+				it_start=it_current+1;
+				(*it_current).count=it_end-it_current+1;
+				dict.erase(it_start,it_end+1);
+			}
+		} 
+		it_current--;
+	}
+	
+}
 void filter(string &s){
 	string::iterator  it= s.end()-1;
 	while(((*it)>'z'||(*it)<'a')&& it>=s.begin()){
-		//cout<<"char="<<*it<<endl; 
 		it--;
 	}
 	if(it<s.begin())s.clear();
 	else if(it==s.end()-2){
-		//cout<<s<<endl;
 		s.erase(it+1);
 	}
-	//else if((s.end()-1==s.begin())&&(*s.begin()>'z'||*s.begin()<'a')) s.clear();
 	else if (it!=(s.end()-1)) s.erase(it+1,s.end());
+	
+	//filter from the start
+	if(!s.empty()){
+		it= s.begin();
+		while(((*it)>'z'||(*it)<'a')&&it<s.end()) it++;
+		if((it-1)==s.begin()) s.erase(s.begin());
+		else s.erase(s.begin(),it);
+	}
 	
 }

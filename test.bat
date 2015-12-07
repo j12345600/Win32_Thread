@@ -1,3 +1,5 @@
-_beginthreadex.exe abc def asd
+::_beginthreadex.exe prada.txt
+_beginthreadex.exe gcc.txt bash.txt
+::_beginthreadex.exe testfile.txt
 @echo off
 pause
